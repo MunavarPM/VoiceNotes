@@ -8,9 +8,9 @@ See **[Architecture.md](Architecture.md)** for the full design.
 
 ## Status
 
-**UI scaffold** — all iOS + macOS screens are built and wired to mock/sample
-data. Real recording/playback, on-disk persistence, and mic permissions are
-staged for the next pass (documented in `Architecture.md`).
+**Functional** — records real audio (`AVAudioRecorder`), persists recordings to
+disk with **SwiftData**, and plays them back with a live/stored waveform, on both
+iOS and macOS. The first recording prompts for microphone access.
 
 ## Requirements
 

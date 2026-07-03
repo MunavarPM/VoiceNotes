@@ -2,14 +2,15 @@
 //  PlayerView.swift
 //  VoiceNotes
 //
-//  Expanded player presented as a sheet. Mock playback for the scaffold.
+//  Expanded player sheet with the recording's real stored waveform and a
+//  full seekable scrubber. Controls the shared player, so it stays in sync
+//  with inline playback on the dashboard.
 //
 
 import SwiftUI
 
 struct PlayerView: View {
     @State private var viewModel: PlayerViewModel
-    @Environment(\.dismiss) private var dismiss
 
     init(viewModel: PlayerViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -32,9 +33,16 @@ struct PlayerView: View {
             }
             .padding(.horizontal)
 
-            WaveformView(samples: viewModel.waveformSamples)
-                .frame(height: 80)
-                .padding(.horizontal)
+            if viewModel.waveform.isEmpty {
+                Image(systemName: "waveform")
+                    .font(.system(size: 44))
+                    .foregroundStyle(Color.waveform)
+                    .frame(height: 80)
+            } else {
+                WaveformView(samples: viewModel.waveform)
+                    .frame(height: 80)
+                    .padding(.horizontal)
+            }
 
             VStack(spacing: 6) {
                 ProgressBarView(
@@ -68,5 +76,5 @@ struct PlayerView: View {
 }
 
 #Preview {
-    PlayerView(viewModel: PlayerViewModel(recording: Recording.samples[0]))
+    PlayerView(viewModel: PlayerViewModel(recording: Recording.samples[0], player: AudioPlayerService()))
 }

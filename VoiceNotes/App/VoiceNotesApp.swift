@@ -2,9 +2,8 @@
 //  VoiceNotesApp.swift
 //  VoiceNotes
 //
-//  Single @main entry point shared across iOS and macOS. RootView selects
-//  the platform-specific wrapper. SwiftData runs in-memory for the UI
-//  scaffold; disk persistence lands in the logic pass.
+//  Single @main entry point shared across iOS and macOS. SwiftData now
+//  persists recordings to disk.
 //
 
 import SwiftUI
@@ -14,7 +13,7 @@ import SwiftData
 struct VoiceNotesApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([Recording.self])
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
             return try ModelContainer(for: schema, configurations: [configuration])
         } catch {

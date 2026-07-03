@@ -27,7 +27,7 @@ struct WaveformView: View {
 }
 
 #Preview {
-    WaveformView(samples: StubWaveformService().makeSamples(count: 40))
+    WaveformView(samples: Recording.previewWaveform)
         .frame(height: 40)
         .padding()
 }

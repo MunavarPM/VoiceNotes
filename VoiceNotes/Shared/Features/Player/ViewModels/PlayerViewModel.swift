@@ -2,7 +2,8 @@
 //  PlayerViewModel.swift
 //  VoiceNotes
 //
-//  Drives the expanded player screen. Mock playback for the scaffold.
+//  Drives the expanded player. Reads/controls the SAME shared player as
+//  the dashboard, so playback is consistent across the app.
 //
 
 import Foundation
@@ -11,30 +12,44 @@ import Observation
 @Observable
 final class PlayerViewModel {
     let recording: Recording
-    var isPlaying = false
-    var progress: Double = 0.35
-    var waveformSamples: [Float]
 
     private let player: AudioPlayerService
+    private let fileManager: FileManagerService
 
     init(
         recording: Recording,
-        player: AudioPlayerService = StubAudioPlayerService(),
-        waveformService: WaveformService = StubWaveformService()
+        player: AudioPlayerService,
+        fileManager: FileManagerService = DefaultFileManagerService()
     ) {
         self.recording = recording
         self.player = player
-        self.waveformSamples = waveformService.makeSamples(count: 60)
+        self.fileManager = fileManager
     }
 
-    var elapsed: TimeInterval { recording.duration * progress }
+    var isPlaying: Bool {
+        player.currentFileName == recording.filePath && player.isPlaying
+    }
+
+    var progress: Double {
+        player.currentFileName == recording.filePath ? player.progress : 0
+    }
+
+    var elapsed: TimeInterval {
+        recording.duration * progress
+    }
+
+    var waveform: [Float] {
+        recording.waveform
+    }
 
     func togglePlay() {
-        isPlaying.toggle()
+        guard !recording.filePath.isEmpty else { return }
+        let url = fileManager.url(forFileName: recording.filePath)
+        player.toggle(url: url, fileName: recording.filePath)
     }
 
-    func seek(to newProgress: Double) {
-        progress = min(max(newProgress, 0), 1)
-        player.seek(to: progress)
+    func seek(to fraction: Double) {
+        guard player.currentFileName == recording.filePath else { return }
+        player.seek(to: fraction)
     }
 }

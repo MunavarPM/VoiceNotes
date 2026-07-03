@@ -3,9 +3,8 @@
 A multiplatform (iOS + macOS) voice-notes app built from **one codebase** with
 SwiftUI, SwiftData, and AVFoundation, following **MVVM + Services + Repository**.
 
-> **Status:** UI scaffold. All screens are built and wired to mock/sample data.
-> Real audio (AVFoundation), on-disk SwiftData persistence, and microphone
-> permissions are staged for the next pass — see [Deferred](#deferred-to-the-logic-pass).
+> **Status:** Functional. Records real audio, persists to disk with SwiftData,
+> and plays back with a live/stored waveform — on both iOS and macOS.
 
 ---
 
@@ -13,19 +12,16 @@ SwiftUI, SwiftData, and AVFoundation, following **MVVM + Services + Repository**
 
 - **One Xcode project, one multiplatform target** (`VoiceNotes`) with
   **Supported Destinations: iPhone, iPad, Mac**.
-- **~95% shared code.** Only small layout tweaks are platform-specific,
-  isolated with `#if os(iOS)` / `#if os(macOS)` and the thin `iOS/` + `macOS/`
-  root wrappers.
-- **Single `@main`** (`App/VoiceNotesApp.swift`). `RootView` picks the
-  platform wrapper.
-- **Minimum OS:** iOS 17 / macOS 14 (required for SwiftData + the
-  `@Observable` Observation framework).
+- **~95% shared code.** Only small layout tweaks and the audio-session /
+  permission APIs are platform-specific, isolated with `#if os(iOS)` /
+  `#if os(macOS)`.
+- **Single `@main`** (`App/VoiceNotesApp.swift`); `RootView` picks the platform
+  wrapper.
+- **Minimum OS:** iOS 17 / macOS 14 (SwiftData + the `@Observable` framework).
 
 > **Divergence from the original spec:** the spec sketched two per-platform
-> entry files (`iOS/AudioRecorderApp.swift`, `macOS/AudioRecorderApp.swift`).
-> A single multiplatform target can only have one `@main`, so we use one shared
-> entry point and keep the `iOS/` + `macOS/` folders for platform-specific
-> _views_ instead. This is cleaner and truer to "one codebase."
+> entry files. A single multiplatform target has one `@main`, so we use one
+> shared entry point and keep `iOS/` + `macOS/` for platform-specific views.
 
 ---
 
@@ -33,101 +29,92 @@ SwiftUI, SwiftData, and AVFoundation, following **MVVM + Services + Repository**
 
 ```
 VoiceNotes/
-├── App/
-│   └── VoiceNotesApp.swift          # single @main + RootView
+├── App/VoiceNotesApp.swift          # single @main + RootView
 ├── Shared/
-│   ├── Models/
-│   │   └── Recording.swift          # @Model: id, title, filePath, duration, createdAt, isStarred, isShared
-│   ├── Repository/
-│   │   └── RecordingRepository.swift# protocol + MockRecordingRepository
+│   ├── Models/Recording.swift       # @Model: id, title, filePath, duration,
+│   │                                #         createdAt, isStarred, isShared, waveform
+│   ├── Repository/RecordingRepository.swift   # protocol + SwiftDataRecordingRepository
 │   ├── Services/
-│   │   ├── AudioRecorderService.swift  # protocol + stub (AVAudioRecorder later)
-│   │   ├── AudioPlayerService.swift    # protocol + stub (AVAudioPlayer later)
-│   │   ├── WaveformService.swift       # protocol + stub (power → bars)
-│   │   └── FileManagerService.swift    # protocol + stub (.m4a files)
+│   │   ├── AudioRecorderService.swift   # protocol + AVAudioRecorder impl (+ permission, metering)
+│   │   ├── AudioPlayerService.swift     # @Observable shared AVAudioPlayer (source of truth)
+│   │   ├── WaveformService.swift        # protocol + downsampler (power → bars)
+│   │   └── FileManagerService.swift     # protocol + .m4a files in Documents/Recordings
 │   ├── Features/
-│   │   ├── Dashboard/
-│   │   │   ├── Views/
-│   │   │   │   ├── DashboardView.swift      # shared list screen
-│   │   │   │   ├── SearchBarView.swift      # search + "Ask AI"
-│   │   │   │   ├── FilterChipsView.swift    # All / Shared / Starred (iOS)
-│   │   │   │   ├── RecordingCardView.swift  # row: date, title, inline player, actions
-│   │   │   │   └── BottomRecorderView.swift # floating recorder + Done
-│   │   │   └── ViewModels/
-│   │   │       └── DashboardViewModel.swift
-│   │   └── Player/
-│   │       ├── Views/PlayerView.swift
-│   │       └── ViewModels/PlayerViewModel.swift
-│   ├── Components/
-│   │   ├── WaveformView.swift        # [Float] samples → bars
-│   │   ├── PlayButton.swift
-│   │   └── ProgressBarView.swift     # seekable
-│   └── Core/
-│       ├── Constants/AppConstants.swift
-│       ├── Extensions/               # Date+Format, Color+Theme
-│       └── Helpers/SampleData.swift  # Recording.samples
-├── iOS/
-│   └── PlatformRootView.swift        # #if os(iOS)
-└── macOS/
-    └── PlatformRootView.swift        # #if os(macOS)
+│   │   ├── Dashboard/{Views, ViewModels}
+│   │   └── Player/{Views, ViewModels}
+│   ├── Components/                  # WaveformView, PlayButton, ProgressBarView
+│   └── Core/{Constants, Extensions, Helpers}
+├── iOS/IOSRootView.swift            # #if os(iOS)
+└── macOS/MacRootView.swift          # #if os(macOS)
+VoiceNotes.entitlements              # macOS App Sandbox + microphone (audio-input)
 ```
 
 > The target uses **file-system synchronized groups**, so any file added under
-> `VoiceNotes/` is compiled automatically — no `.pbxproj` bookkeeping.
+> `VoiceNotes/` is compiled automatically.
 
 ---
 
-## 3. Layers (MVVM + Services + Repository)
+## 3. Layers
 
-**View** — SwiftUI only. Shows UI, forwards taps to the ViewModel. No logic.
-`DashboardView`, `RecordingCardView`, `BottomRecorderView`, `PlayerView`, etc.
+**View** — SwiftUI only. **ViewModel** — `@Observable` logic (`DashboardViewModel`,
+`PlayerViewModel`). **Model** — `Recording` (`@Model`). **Services** — the real
+work. **Repository** — the only seam to persistence.
 
-**ViewModel** — `@Observable` business logic. Holds `isRecording`,
-`waveformSamples`, `recordings`, `searchText`, `filter`, `currentlyPlaying`;
-formats data; orchestrates services + repository. `DashboardViewModel`,
-`PlayerViewModel`.
+**Repository.** `RecordingRepository` is a protocol; `SwiftDataRecordingRepository`
+is the on-disk implementation. The ViewModel calls `fetchAll / save / delete /
+rename` and never sees SwiftData. The view passes its `ModelContext` into the
+ViewModel via `configure(context:)`.
 
-**Model** — data only. `Recording` (`@Model`).
-
-**Services** — the real work (later pass): `AudioRecorderService`
-(AVAudioRecorder, permission, metering), `AudioPlayerService` (AVAudioPlayer,
-play/pause/seek), `WaveformService` (power → bars), `FileManagerService`
-(`.m4a` save/delete). Each is a **protocol** with a stub conformer today.
-
-**Repository** — `RecordingRepository` is the only seam to persistence. The
-ViewModel never sees SwiftData or FileManager; it calls `fetchAll / save /
-delete / rename`. Swapping `MockRecordingRepository` for a SwiftData-backed one
-requires **zero ViewModel changes**.
+**Playback source of truth.** `AudioPlayerService` is a single **`@Observable`
+shared** object injected into both ViewModels. Because it's the one place that
+knows what's playing, only one recording plays at a time and the list row + the
+expanded player stay perfectly in sync. (This is a deliberate, SwiftUI-idiomatic
+choice: an `@Observable` service so the views observe playback directly.)
 
 ---
 
 ## 4. Data flow
 
 ```
-Recording:  DashboardView → DashboardViewModel → AudioRecorderService → (AVAudioRecorder)
-                                              ↘ RecordingRepository → (SwiftData)
+Recording:  DashboardView → DashboardViewModel → AudioRecorderService → AVAudioRecorder
+                          ↘ WaveformService (bars) ↘ RecordingRepository → SwiftData
+                                                    ↘ FileManagerService → .m4a on disk
 
-Playback:   RecordingCardView → PlayerView → PlayerViewModel → AudioPlayerService → (AVAudioPlayer)
+Playback:   RecordingCardView / PlayerView → ViewModel → AudioPlayerService (shared) → AVAudioPlayer
 ```
 
----
+**Recording:** `+` → request mic permission → `AVAudioRecorder` writes an `.m4a`
+to `Documents/Recordings/`, metering feeds the live waveform (20 Hz). **Done** →
+duration + downsampled waveform saved as a `Recording` in SwiftData.
 
-## 5. What's functional in the scaffold
-
-- Recording list rendered from the mock repository (sorted by date).
-- Search filtering + **All / Shared / Starred** chips (iOS).
-- Floating recorder toggled by `+` / `Done` (mock waveform + timer).
-- Tap a card → expanded **PlayerView** sheet (mock play/pause/seek).
-- Card `…` menu → **Rename** (alert) / **Share** / **Delete** (real against mock data).
-- **Ask AI** and **Settings** open placeholder sheets.
+**Playback:** tap a row's play button (inline) or open the expanded player; both
+drive the shared `AudioPlayerService` with real seek/scrub.
 
 ---
 
-## Deferred to the logic pass
+## 5. Cross-platform specifics
 
-- Real `AVAudioRecorder` / `AVAudioPlayer`; live metering → waveform; real seek.
-- SwiftData persistence to disk (currently `isStoredInMemoryOnly: true`) behind a
-  real `RecordingRepository`.
-- **Mic permission:** `INFOPLIST_KEY_NSMicrophoneUsageDescription` + a macOS
-  entitlements file with `com.apple.security.device.audio-input` (App Sandbox is on).
-- `.m4a` file save/delete in Documents; universal app icon.
+| Concern | iOS | macOS |
+|---|---|---|
+| Mic permission | `AVAudioApplication.requestRecordPermission` | `AVCaptureDevice.requestAccess(for: .audio)` |
+| Audio session | `AVAudioSession` (playAndRecord / playback) | none (no `AVAudioSession` on macOS) |
+| Mic entitlement | Info.plist usage string | `VoiceNotes.entitlements` → `com.apple.security.device.audio-input` + App Sandbox |
+| Row layout | compact (play + duration, scrub in expanded player) | full inline seek bar |
+| Done button | green pill w/ checkmark | black pill |
+
+`INFOPLIST_KEY_NSMicrophoneUsageDescription` is set for both platforms.
+
+---
+
+## 6. Build & run
+
+Open `VoiceNotes.xcodeproj`, pick a Mac or an iOS simulator, and run. First
+recording prompts for microphone access. Verified with `xcodebuild` for both
+`platform=macOS` and `platform=iOS Simulator`.
+
+## Possible next steps
+
+- Real waveform for imported/older files via `AVAssetReader`.
+- iCloud sync (SwiftData + CloudKit).
+- Functional Ask AI (transcription/summary) and Share.
+- App icons.

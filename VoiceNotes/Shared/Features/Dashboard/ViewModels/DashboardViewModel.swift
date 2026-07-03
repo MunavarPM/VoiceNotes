@@ -2,12 +2,13 @@
 //  DashboardViewModel.swift
 //  VoiceNotes
 //
-//  Business logic for the dashboard: loading/filtering recordings and
-//  driving the recording state. Talks only to the Repository and Services
-//  — never to SwiftData/AVFoundation directly.
+//  Owns dashboard state and orchestrates the services + repository. It
+//  never touches SwiftData/AVFoundation directly. Playback is delegated to
+//  the shared @Observable AudioPlayerService so all views stay in sync.
 //
 
 import Foundation
+import SwiftData
 import Observation
 
 enum RecordingFilter: String, CaseIterable, Identifiable {
@@ -20,36 +21,55 @@ enum RecordingFilter: String, CaseIterable, Identifiable {
 
 @Observable
 final class DashboardViewModel {
-    // State the views observe
+    // Displayed state
     var recordings: [Recording] = []
     var searchText: String = ""
     var filter: RecordingFilter = .all
-    var isRecording: Bool = false
-    var recordingDuration: TimeInterval = 138   // mock 02:18 from the design
-    var waveformSamples: [Float] = []
-    var currentlyPlaying: Recording.ID?
     var showAskAI = false
     var showSettings = false
 
-    // Dependencies (injected; defaulted to stubs for the scaffold)
-    private let repository: RecordingRepository
-    private let waveformService: WaveformService
+    // Recording state
+    var isRecording = false
+    var recordingElapsed: TimeInterval = 0
+    var liveWaveform: [Float] = []
+    var permissionDenied = false
+
+    /// Shared playback service — the single source of truth for playback.
+    let player: AudioPlayerService
+
     private let recorder: AudioRecorderService
+    private let waveformService: WaveformService
+    private let fileManager: FileManagerService
+    private var repository: RecordingRepository?
+
+    private var recordingURL: URL?
+    private var capturedSamples: [Float] = []
+    private var meterTask: Task<Void, Never>?
+
+    private let liveBarCount = 40
+    private let storedBarCount = 50
 
     init(
-        repository: RecordingRepository = MockRecordingRepository(),
-        waveformService: WaveformService = StubWaveformService(),
-        recorder: AudioRecorderService = StubAudioRecorderService()
+        player: AudioPlayerService = AudioPlayerService(),
+        recorder: AudioRecorderService = DefaultAudioRecorderService(),
+        waveformService: WaveformService = DefaultWaveformService(),
+        fileManager: FileManagerService = DefaultFileManagerService()
     ) {
-        self.repository = repository
-        self.waveformService = waveformService
+        self.player = player
         self.recorder = recorder
-        self.waveformSamples = waveformService.makeSamples(count: AppConstants.Layout.waveformBarCount)
+        self.waveformService = waveformService
+        self.fileManager = fileManager
+    }
+
+    /// Wire up SwiftData once the view provides the ModelContext.
+    func configure(context: ModelContext) {
+        guard repository == nil else { return }
+        repository = SwiftDataRecordingRepository(context: context)
         loadRecordings()
     }
 
     func loadRecordings() {
-        recordings = repository.fetchAll()
+        recordings = repository?.fetchAll() ?? []
     }
 
     var filteredRecordings: [Recording] {
@@ -66,33 +86,118 @@ final class DashboardViewModel {
             }
     }
 
-    // MARK: - Recording (mock)
+    // MARK: - Recording
 
-    func startNewRecording() {
-        try? recorder.startRecording()
-        isRecording = true
+    func startRecording() async {
+        guard !isRecording else { return }
+        let granted = await recorder.requestPermission()
+        guard granted else {
+            permissionDenied = true
+            return
+        }
+
+        let url = fileManager.newRecordingURL()
+        do {
+            try recorder.start(url: url)
+            recordingURL = url
+            capturedSamples = []
+            liveWaveform = []
+            recordingElapsed = 0
+            isRecording = true
+            startMetering()
+        } catch {
+            isRecording = false
+        }
     }
 
     func stopRecording() {
-        _ = recorder.stopRecording()
+        guard isRecording else { return }
+        meterTask?.cancel()
+        meterTask = nil
+
+        let duration = recorder.stop()
         isRecording = false
+
+        guard let url = recordingURL, duration > 0.3 else {
+            // Too short / failed — clean up the empty file.
+            if let url = recordingURL { try? fileManager.delete(fileName: url.lastPathComponent) }
+            recordingURL = nil
+            return
+        }
+
+        let bars = waveformService.resample(capturedSamples, to: storedBarCount)
+        let recording = Recording(
+            title: defaultTitle(),
+            filePath: url.lastPathComponent,
+            duration: duration,
+            waveform: bars
+        )
+        repository?.save(recording)
+        loadRecordings()
+        recordingURL = nil
     }
 
-    func toggleRecording() {
-        isRecording ? stopRecording() : startNewRecording()
+    private func startMetering() {
+        meterTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 50_000_000) // 20 Hz
+                guard let self, self.isRecording else { return }
+                let power = self.recorder.currentPower()
+                self.capturedSamples.append(power)
+                self.recordingElapsed += 0.05
+
+                var tail = self.liveWaveform
+                tail.append(power)
+                if tail.count > self.liveBarCount {
+                    tail.removeFirst(tail.count - self.liveBarCount)
+                }
+                self.liveWaveform = tail
+            }
+        }
+    }
+
+    private func defaultTitle() -> String {
+        "New Recording · " + Date().formatted(date: .abbreviated, time: .shortened)
+    }
+
+    // MARK: - Playback (delegated to the shared player)
+
+    func togglePlayback(for recording: Recording) {
+        guard !recording.filePath.isEmpty else { return }
+        let url = fileManager.url(forFileName: recording.filePath)
+        player.toggle(url: url, fileName: recording.filePath)
+    }
+
+    func isPlaying(_ recording: Recording) -> Bool {
+        player.currentFileName == recording.filePath && player.isPlaying
+    }
+
+    func isActive(_ recording: Recording) -> Bool {
+        player.currentFileName == recording.filePath
+    }
+
+    func progress(for recording: Recording) -> Double {
+        isActive(recording) ? player.progress : 0
+    }
+
+    func seek(_ recording: Recording, to fraction: Double) {
+        guard isActive(recording) else { return }
+        player.seek(to: fraction)
     }
 
     // MARK: - Mutations
 
     func delete(_ recording: Recording) {
-        repository.delete(recording)
+        if isActive(recording) { player.stop() }
+        try? fileManager.delete(fileName: recording.filePath)
+        repository?.delete(recording)
         loadRecordings()
     }
 
     func rename(_ recording: Recording, to newTitle: String) {
         let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        repository.rename(recording, to: trimmed)
+        repository?.rename(recording, to: trimmed)
         loadRecordings()
     }
 }

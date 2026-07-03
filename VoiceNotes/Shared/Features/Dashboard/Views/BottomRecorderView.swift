@@ -30,7 +30,8 @@ struct BottomRecorderView: View {
 
             VStack(spacing: 10) {
                 HStack(spacing: 12) {
-                    Image(systemName: "pause.fill")
+                    Image(systemName: "mic.fill")
+                        .foregroundStyle(.red)
                     WaveformView(samples: samples)
                         .frame(height: 24)
                     Text(duration.durationString)
@@ -80,9 +81,6 @@ struct BottomRecorderView: View {
 }
 
 #Preview {
-    BottomRecorderView(
-        samples: StubWaveformService().makeSamples(count: 40),
-        duration: 138
-    ) {}
+    BottomRecorderView(samples: Recording.previewWaveform, duration: 138) {}
         .padding(40)
 }

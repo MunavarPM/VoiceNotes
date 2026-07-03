@@ -2,34 +2,81 @@
 //  AudioRecorderService.swift
 //  VoiceNotes
 //
-//  Owns AVAudioRecorder, mic permission, metering and start/stop.
-//  This is a stub for the UI scaffold; the AVFoundation implementation
-//  lands in the logic pass.
+//  Real AVAudioRecorder-backed recording with microphone permission and
+//  live metering. Cross-platform: AVAudioSession is configured on iOS only
+//  (macOS has no audio session), and permission uses the platform API.
 //
 
 import Foundation
+import AVFoundation
 
 protocol AudioRecorderService: AnyObject {
     var isRecording: Bool { get }
-    func startRecording() throws
-    func stopRecording() -> URL?
-    /// Normalized 0...1 power level for the live waveform.
+    /// Requests microphone access. Returns true if granted.
+    func requestPermission() async -> Bool
+    /// Begins recording to `url`. Throws if the recorder can't start.
+    func start(url: URL) throws
+    /// Stops recording and returns the recorded duration in seconds.
+    func stop() -> TimeInterval
+    /// Normalized 0...1 microphone power for the live waveform.
     func currentPower() -> Float
 }
 
-final class StubAudioRecorderService: AudioRecorderService {
+final class DefaultAudioRecorderService: AudioRecorderService {
+    private var recorder: AVAudioRecorder?
     private(set) var isRecording = false
 
-    func startRecording() throws {
+    func requestPermission() async -> Bool {
+        #if os(iOS)
+        return await withCheckedContinuation { continuation in
+            AVAudioApplication.requestRecordPermission { granted in
+                continuation.resume(returning: granted)
+            }
+        }
+        #else
+        return await AVCaptureDevice.requestAccess(for: .audio)
+        #endif
+    }
+
+    func start(url: URL) throws {
+        #if os(iOS)
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.playAndRecord, mode: .default)
+        try session.setActive(true)
+        #endif
+
+        let settings: [String: Any] = [
+            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+            AVSampleRateKey: 44_100.0,
+            AVNumberOfChannelsKey: 1,
+            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+        ]
+
+        let recorder = try AVAudioRecorder(url: url, settings: settings)
+        recorder.isMeteringEnabled = true
+        recorder.record()
+        self.recorder = recorder
         isRecording = true
     }
 
-    func stopRecording() -> URL? {
+    func stop() -> TimeInterval {
+        let duration = recorder?.currentTime ?? 0
+        recorder?.stop()
+        recorder = nil
         isRecording = false
-        return nil
+        #if os(iOS)
+        try? AVAudioSession.sharedInstance().setActive(false)
+        #endif
+        return duration
     }
 
     func currentPower() -> Float {
-        Float.random(in: 0.15...1.0)
+        guard let recorder else { return 0 }
+        recorder.updateMeters()
+        let decibels = recorder.averagePower(forChannel: 0)   // ~ -160...0 dB
+        let floorDb: Float = -55
+        guard decibels > floorDb else { return 0.05 }
+        let normalized = (decibels - floorDb) / (0 - floorDb) // 0...1
+        return max(0.05, min(1, normalized))
     }
 }
