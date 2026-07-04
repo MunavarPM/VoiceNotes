@@ -2,7 +2,8 @@
 //  SearchBarView.swift
 //  VoiceNotes
 //
-//  Search field plus the "Ask AI" pill (matches iOS + macOS mockups).
+//  A single rounded search field with the "Ask AI" pill floating inside it
+//  on the trailing edge (matches the mockup).
 //
 
 import SwiftUI
@@ -12,30 +13,33 @@ struct SearchBarView: View {
     var onAskAI: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField(AppConstants.searchPlaceholder, text: $text)
-                    .textFieldStyle(.plain)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .background(Color.fieldFill, in: Capsule())
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+
+            TextField(AppConstants.searchPlaceholder, text: $text)
+                .textFieldStyle(.plain)
 
             Button(action: onAskAI) {
                 HStack(spacing: 5) {
-                    Image(systemName: "sparkles")
+                    Image("ic-aiHead")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
                     Text(AppConstants.askAI)
+                        .font(.subheadline.weight(.semibold))
                 }
-                .font(.subheadline.weight(.medium))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
                 .background(Color.appBackground, in: Capsule())
-                .overlay(Capsule().stroke(Color.gray.opacity(0.25)))
+                .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
             }
             .buttonStyle(.plain)
         }
+        .padding(.leading, 14)
+        .padding(.trailing, 5)
+        .padding(.vertical, 5)
+        .background(Color.fieldFill, in: Capsule())
     }
 }
 

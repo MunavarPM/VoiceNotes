@@ -31,7 +31,7 @@ final class DefaultFileManagerService: FileManagerService {
 
     func newRecordingURL() -> URL {
         recordingsDirectory
-            .appendingPathComponent(UUID().uuidString)
+            .appendingPathComponent(UUID().uuidString) // a random unique name so never collide
             .appendingPathExtension("m4a")
     }
 
