@@ -31,10 +31,19 @@ struct DashboardView: View {
                     .padding(.horizontal, 40)
                     .padding(.bottom, 16)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else if viewModel.isDictating {
+                    DictationBarView(
+                        level: viewModel.dictationLevel,
+                        onStop: { withAnimation(.spring(response: 0.35)) { viewModel.stopDictation() } }
+                    )
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 16)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else if viewModel.player.currentFileName != nil {
                     playbackBar
                 }
             }
+            .animation(.spring(response: 0.35), value: viewModel.isDictating)
             .animation(.spring(response: 0.35), value: viewModel.player.currentFileName)
             .background(Color.appBackground)
             .toolbar { toolbarContent }
@@ -47,9 +56,6 @@ struct DashboardView: View {
                     #if os(macOS)
                     .frame(width: 440, height: 520)
                     #endif
-            }
-            .sheet(isPresented: $viewModel.showAskAI) {
-                placeholderSheet(icon: "sparkles", title: AppConstants.askAI, message: "AI assistant coming soon.") { viewModel.showAskAI = false }
             }
             .sheet(isPresented: $viewModel.showSettings) {
                 placeholderSheet(icon: "gearshape", title: "Settings", message: "Settings coming soon.") { viewModel.showSettings = false }
@@ -80,7 +86,9 @@ struct DashboardView: View {
                     .padding(.top, 4)
                 #endif
 
-                SearchBarView(text: $viewModel.searchText) { viewModel.showAskAI = true }
+                SearchBarView(text: $viewModel.searchText, isListening: viewModel.isDictating) {
+                    withAnimation(.spring(response: 0.35)) { viewModel.toggleDictation() }
+                }
 
                 #if os(iOS)
                 FilterChipsView(selection: $viewModel.filter)

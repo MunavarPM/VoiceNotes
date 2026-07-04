@@ -25,8 +25,11 @@ final class DashboardViewModel {
     var recordings: [Recording] = []
     var searchText: String = ""
     var filter: RecordingFilter = .all
-    var showAskAI = false
     var showSettings = false
+
+    // Dictation ("Ask AI") state
+    var isDictating = false
+    var dictationLevel: CGFloat = 0
 
     // Recording state
     var isRecording = false
@@ -42,11 +45,13 @@ final class DashboardViewModel {
     private let recorder: AudioRecorderService
     private let waveformService: WaveformService
     private let fileManager: FileManagerService
+    private let speech: SpeechRecognitionService
     private var repository: RecordingRepository?
 
     private var recordingURL: URL?
     private var capturedSamples: [Float] = []
     private var meterTask: Task<Void, Never>?
+    private var silenceTask: Task<Void, Never>?
 
     private let liveBarCount = 40
     private let storedBarCount = 50
@@ -55,12 +60,14 @@ final class DashboardViewModel {
         player: AudioPlayerService = AudioPlayerService(),
         recorder: AudioRecorderService = DefaultAudioRecorderService(),
         waveformService: WaveformService = DefaultWaveformService(),
-        fileManager: FileManagerService = DefaultFileManagerService()
+        fileManager: FileManagerService = DefaultFileManagerService(),
+        speech: SpeechRecognitionService = DefaultSpeechRecognitionService()
     ) {
         self.player = player
         self.recorder = recorder
         self.waveformService = waveformService
         self.fileManager = fileManager
+        self.speech = speech
     }
 
     /// Wire up SwiftData once the view provides the ModelContext.
@@ -165,6 +172,64 @@ final class DashboardViewModel {
 
     private func defaultTitle() -> String {
         "New Recording · " + Date().formatted(date: .abbreviated, time: .shortened)
+    }
+
+    // MARK: - Dictation ("Ask AI" → live speech-to-text into the search field)
+
+    func toggleDictation() {
+        if isDictating {
+            stopDictation()
+        } else {
+            Task { await startDictation() }
+        }
+    }
+
+    private func startDictation() async {
+        guard !isRecording, !isDictating else { return }
+        let granted = await speech.requestPermission()
+        guard granted else {
+            permissionDenied = true
+            return
+        }
+        do {
+            searchText = ""
+            dictationLevel = 0
+            isDictating = true
+            try speech.start(
+                onText: { [weak self] text in
+                    self?.searchText = text        // fills + filters the list live
+                    self?.resetSilenceTimer()
+                },
+                onLevel: { [weak self] level in
+                    guard let self else { return }
+                    self.dictationLevel = self.dictationLevel * 0.7 + CGFloat(level) * 0.3
+                },
+                onStop: { [weak self] in
+                    self?.stopDictation()
+                }
+            )
+            resetSilenceTimer()
+        } catch {
+            isDictating = false
+        }
+    }
+
+    func stopDictation() {
+        silenceTask?.cancel()
+        silenceTask = nil
+        speech.stop()
+        isDictating = false
+        dictationLevel = 0
+    }
+
+    /// Auto-stop after ~1.5s of no new transcription.
+    private func resetSilenceTimer() {
+        silenceTask?.cancel()
+        silenceTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard let self, !Task.isCancelled else { return }
+            self.stopDictation()
+        }
     }
 
     // MARK: - Playback (delegated to the shared player)

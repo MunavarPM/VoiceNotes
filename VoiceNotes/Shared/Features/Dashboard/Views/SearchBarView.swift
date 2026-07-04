@@ -10,6 +10,7 @@ import SwiftUI
 
 struct SearchBarView: View {
     @Binding var text: String
+    var isListening: Bool = false
     var onAskAI: () -> Void
 
     var body: some View {
@@ -26,12 +27,13 @@ struct SearchBarView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 18, height: 18)
-                    Text(AppConstants.askAI)
+                    Text(isListening ? "Listening…" : AppConstants.askAI)
                         .font(.askAI)
                 }
+                .foregroundStyle(isListening ? Color.dodgerBlue : Color.primary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
-                .background(Color.appBackground, in: Capsule())
+                .background(isListening ? Color.dodgerBlue.opacity(0.12) : Color.appBackground, in: Capsule())
                 .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
             }
             .buttonStyle(.plain)
