@@ -18,6 +18,13 @@ final class AudioPlayerService {
     private(set) var isPlaying = false
     /// Playback position as a 0...1 fraction.
     private(set) var progress: Double = 0
+    /// Total duration of the loaded file, in seconds.
+    private(set) var duration: TimeInterval = 0
+    /// Playback speed (1x / 1.5x / 2x).
+    private(set) var rate: Float = 1.0
+
+    /// Elapsed time in seconds.
+    var elapsed: TimeInterval { duration * progress }
 
     @ObservationIgnored private var player: AVAudioPlayer?
     @ObservationIgnored private var ticker: Task<Void, Never>?
@@ -39,10 +46,13 @@ final class AudioPlayerService {
             try session.setActive(true)
             #endif
             let player = try AVAudioPlayer(contentsOf: url)
+            player.enableRate = true
             player.prepareToPlay()
             self.player = player
             currentFileName = fileName
+            duration = player.duration
             player.play()
+            player.rate = rate
             isPlaying = true
             startTicker()
         } catch {
@@ -53,8 +63,31 @@ final class AudioPlayerService {
     func resume() {
         guard let player else { return }
         player.play()
+        player.rate = rate
         isPlaying = true
         startTicker()
+    }
+
+    /// Play/pause the already-loaded file (no URL needed).
+    func togglePlayPause() {
+        guard player != nil else { return }
+        isPlaying ? pause() : resume()
+    }
+
+    /// Jump forward (+) or back (−) by a number of seconds.
+    func skip(by seconds: TimeInterval) {
+        guard let player else { return }
+        let target = min(max(player.currentTime + seconds, 0), player.duration)
+        player.currentTime = target
+        progress = player.duration > 0 ? target / player.duration : 0
+    }
+
+    /// Cycle 1x → 1.5x → 2x.
+    func cycleRate() {
+        let options: [Float] = [1.0, 1.5, 2.0]
+        let index = options.firstIndex(of: rate) ?? 0
+        rate = options[(index + 1) % options.count]
+        player?.rate = rate
     }
 
     func pause() {
@@ -76,6 +109,7 @@ final class AudioPlayerService {
         player = nil
         isPlaying = false
         progress = 0
+        duration = 0
         currentFileName = nil
     }
 
@@ -94,6 +128,7 @@ final class AudioPlayerService {
                 if !player.isPlaying && self.isPlaying {
                     self.isPlaying = false
                     self.progress = 0
+                    self.duration = 0
                     self.currentFileName = nil
                     self.stopTicker()
                     return

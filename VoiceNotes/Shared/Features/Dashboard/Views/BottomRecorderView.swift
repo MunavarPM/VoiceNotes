@@ -10,7 +10,6 @@
 import SwiftUI
 
 struct BottomRecorderView: View {
-    let samples: [Float]
     let duration: TimeInterval
     var onDone: () -> Void
     var onExpand: () -> Void = {}
@@ -30,16 +29,18 @@ struct BottomRecorderView: View {
             .zIndex(1)
 
             VStack(spacing: 10) {
-                HStack(spacing: 12) {
-                    WaveformView(samples: samples)
-                        .frame(height: 24)
-                    Text(duration.durationString)
-                        .monospacedDigit()
+                ZStack {
+                    Color.fieldFill
+                    WaterWaveView()
+                    HStack(spacing: 8) {
+                        Image(systemName: "pause.fill")
+                        Text(duration.durationString)
+                            .monospacedDigit()
+                    }
+                    .font(.system(size: 16, weight: .semibold))
                 }
-                .font(.system(size: 15, weight: .medium))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color.limeGreen.opacity(0.1), in: Capsule())
+                .frame(height: 54)
+                .clipShape(Capsule())
 
                 doneButton
             }
@@ -80,6 +81,6 @@ struct BottomRecorderView: View {
 }
 
 #Preview {
-    BottomRecorderView(samples: Recording.previewWaveform, duration: 138) {}
+    BottomRecorderView(duration: 138) {}
         .padding(40)
 }

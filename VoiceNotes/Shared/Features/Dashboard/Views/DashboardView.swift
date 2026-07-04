@@ -24,15 +24,17 @@ struct DashboardView: View {
 
                 if viewModel.isRecording {
                     BottomRecorderView(
-                        samples: viewModel.liveWaveform,
                         duration: viewModel.recordingElapsed,
                         onDone: { withAnimation(.spring(response: 0.35)) { viewModel.stopRecording() } }
                     )
                     .padding(.horizontal, 40)
                     .padding(.bottom, 16)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else if viewModel.player.currentFileName != nil {
+                    playbackBar
                 }
             }
+            .animation(.spring(response: 0.35), value: viewModel.player.currentFileName)
             .background(Color.appBackground)
             .toolbar { toolbarContent }
             #if os(iOS)
@@ -91,8 +93,29 @@ struct DashboardView: View {
             }
             .padding(.horizontal, AppConstants.Layout.horizontalPadding)
             .padding(.top, 8)
-            .padding(.bottom, 160)
+            .padding(.bottom, bottomInset)
         }
+    }
+
+    /// The iOS-only floating "now playing" bar. On macOS playback is
+    /// controlled inline in each card, so this renders nothing.
+    @ViewBuilder
+    private var playbackBar: some View {
+        #if os(iOS)
+        PlaybackBarView(player: viewModel.player)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 16)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        #endif
+    }
+
+    /// Extra bottom space so content clears the floating recorder/player.
+    private var bottomInset: CGFloat {
+        #if os(iOS)
+        160
+        #else
+        100
+        #endif
     }
 
     private var recordingList: some View {

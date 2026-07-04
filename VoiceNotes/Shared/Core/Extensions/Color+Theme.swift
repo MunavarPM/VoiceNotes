@@ -22,4 +22,7 @@ extension Color {
 
     /// Waveform bars (Dodger Blue).
     static let waveform = Color.dodgerBlue
+
+    /// Soft periwinkle for the recorder's water wave (matches the Figma).
+    static let waterWave = Color(hex: "96AAE1")
 }

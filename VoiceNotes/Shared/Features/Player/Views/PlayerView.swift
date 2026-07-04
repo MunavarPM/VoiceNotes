@@ -36,7 +36,7 @@ struct PlayerView: View {
             if viewModel.waveform.isEmpty {
                 Image(systemName: "waveform")
                     .font(.system(size: 44))
-                    .foregroundStyle(Color.waveform)
+                    .foregroundStyle(Color.waveform.opacity(0.2))
                     .frame(height: 80)
             } else {
                 WaveformView(samples: viewModel.waveform)

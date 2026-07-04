@@ -42,22 +42,34 @@ struct RecordingCardView: View {
 
     private var playerRow: some View {
         HStack(spacing: 12) {
-            PlayButton(isPlaying: isPlaying, action: onPlayPause)
-
             if compact {
-                Text(recording.duration.durationString)
-                    .font(.rowCaption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+                // iOS: play + duration inside a compact capsule.
+                HStack(spacing: 8) {
+                    PlayButton(isPlaying: isPlaying, action: onPlayPause)
+                    Text(recording.duration.durationString)
+                        .font(.rowCaption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(Color.fieldFill, in: Capsule())
                 Spacer(minLength: 12)
             } else {
-                ProgressBarView(
-                    progress: Binding(get: { progress }, set: onSeek)
-                )
-                Text(recording.duration.durationString)
-                    .font(.rowCaption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+                // macOS: play + scrubber + duration grouped inside a capsule.
+                HStack(spacing: 12) {
+                    PlayButton(isPlaying: isPlaying, action: onPlayPause)
+                    ProgressBarView(
+                        progress: Binding(get: { progress }, set: onSeek)
+                    )
+                    Text(recording.duration.durationString)
+                        .font(.rowCaption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color.fieldFill, in: Capsule())
             }
 
             actionIcons
@@ -65,13 +77,13 @@ struct RecordingCardView: View {
     }
 
     private var actionIcons: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 8) {
             if showsNoteIcon {
-                Image(systemName: "doc.text")
+                iconBadge("doc.text")
             }
-            Image(systemName: "checkmark.circle")
+            iconBadge("checkmark.circle")
             Button(action: onShare) {
-                Image(systemName: "paperplane")
+                iconBadge("paperplane")
             }
             .buttonStyle(.plain)
             Menu {
@@ -80,13 +92,21 @@ struct RecordingCardView: View {
                 Button("Share", action: onShare)
                 Button("Delete", role: .destructive, action: onDelete)
             } label: {
-                Image(systemName: "ellipsis")
+                iconBadge("ellipsis")
             }
             .buttonStyle(.plain)
+            .menuIndicator(.hidden)
             .fixedSize()
         }
-        .font(.system(size: 15))
-        .foregroundStyle(.secondary)
+        .foregroundStyle(.primary)
+    }
+
+    /// An action glyph inside a circular darkGrayish background.
+    private func iconBadge(_ systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 14))
+            .frame(width: 30, height: 30)
+            .background(Color.fieldFill, in: Circle())
     }
 }
 
