@@ -11,6 +11,7 @@ import SwiftUI
 
 struct BottomRecorderView: View {
     let duration: TimeInterval
+    var level: CGFloat = 0.5
     var onDone: () -> Void
     var onExpand: () -> Void = {}
 
@@ -31,7 +32,7 @@ struct BottomRecorderView: View {
             VStack(spacing: 10) {
                 ZStack {
                     Color.fieldFill
-                    WaterWaveView()
+                    WaterWaveView(level: level)
                     HStack(spacing: 8) {
                         Image(systemName: "pause.fill")
                         Text(duration.durationString)

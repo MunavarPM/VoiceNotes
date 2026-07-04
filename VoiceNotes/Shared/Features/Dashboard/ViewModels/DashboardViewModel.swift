@@ -32,6 +32,8 @@ final class DashboardViewModel {
     var isRecording = false
     var recordingElapsed: TimeInterval = 0
     var liveWaveform: [Float] = []
+    /// Smoothed 0...1 mic level driving the live waveform amplitude.
+    var liveLevel: CGFloat = 0
     var permissionDenied = false
 
     /// Shared playback service — the single source of truth for playback.
@@ -102,6 +104,7 @@ final class DashboardViewModel {
             recordingURL = url
             capturedSamples = []
             liveWaveform = []
+            liveLevel = 0
             recordingElapsed = 0
             isRecording = true
             startMetering()
@@ -145,6 +148,10 @@ final class DashboardViewModel {
                 let power = self.recorder.currentPower()
                 self.capturedSamples.append(power)
                 self.recordingElapsed += 0.05
+
+                // Exponential smoothing so the wave reacts to the voice but
+                // doesn't jitter.
+                self.liveLevel = self.liveLevel * 0.8 + CGFloat(power) * 0.2
 
                 var tail = self.liveWaveform
                 tail.append(power)

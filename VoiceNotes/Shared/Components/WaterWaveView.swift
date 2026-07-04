@@ -12,6 +12,9 @@ import SwiftUI
 
 struct WaterWaveView: View {
     var color: Color = .waterWave
+    /// Live 0...1 input level (from mic power). Higher = taller waves;
+    /// near 0 = an almost flat, calm surface.
+    var level: CGFloat = 0.5
 
     private let layers: [WaveLayer] = [
         // A single, solid periwinkle wave.
@@ -32,7 +35,8 @@ struct WaterWaveView: View {
 
     private func path(for layer: WaveLayer, in size: CGSize, time: Double) -> Path {
         let surfaceY = size.height * (1 - layer.fill)
-        let waveHeight = size.height * 0.11 * layer.amplitude
+        let clampedLevel = max(0.05, min(1, level))
+        let waveHeight = size.height * 0.22 * layer.amplitude * clampedLevel
         let phase = time * layer.speed + layer.phase
         let width = max(size.width, 1)
 

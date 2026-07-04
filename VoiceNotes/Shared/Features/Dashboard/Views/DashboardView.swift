@@ -25,6 +25,7 @@ struct DashboardView: View {
                 if viewModel.isRecording {
                     BottomRecorderView(
                         duration: viewModel.recordingElapsed,
+                        level: viewModel.liveLevel,
                         onDone: { withAnimation(.spring(response: 0.35)) { viewModel.stopRecording() } }
                     )
                     .padding(.horizontal, 40)
