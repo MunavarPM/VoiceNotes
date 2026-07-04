@@ -19,7 +19,7 @@ struct ProgressBarView: View {
 
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color.gray.opacity(0.25))
+                    .fill(Color.darkGrayish)
                     .frame(height: height)
 
                 Capsule()

@@ -27,7 +27,7 @@ struct SearchBarView: View {
                         .scaledToFit()
                         .frame(width: 18, height: 18)
                     Text(AppConstants.askAI)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.askAI)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)

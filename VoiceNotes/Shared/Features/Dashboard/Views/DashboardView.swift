@@ -73,7 +73,7 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: AppConstants.Layout.cardSpacing) {
                 #if os(iOS)
                 Text(AppConstants.appName)
-                    .font(.largeTitle.bold())
+                    .font(.appLargeTitle)
                     .padding(.top, 4)
                 #endif
 

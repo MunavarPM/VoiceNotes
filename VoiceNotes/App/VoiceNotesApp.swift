@@ -11,6 +11,10 @@ import SwiftData
 
 @main
 struct VoiceNotesApp: App {
+    init() {
+        FontRegistrar.registerBundledFonts()
+    }
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([Recording.self])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
@@ -24,6 +28,7 @@ struct VoiceNotesApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .preferredColorScheme(.light)
         }
         .modelContainer(sharedModelContainer)
         #if os(macOS)

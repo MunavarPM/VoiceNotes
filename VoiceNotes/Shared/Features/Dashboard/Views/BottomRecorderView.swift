@@ -2,8 +2,9 @@
 //  BottomRecorderView.swift
 //  VoiceNotes
 //
-//  Floating recorder card: chevron handle, live waveform + timer, and the
-//  Done button (black on macOS, green on iOS — per the mockups).
+//  Floating recorder card: chevron handle, live blue waveform + timer on a
+//  light lime-green pill, and the Done button — lime green on iOS, black on
+//  macOS (per the mockups).
 //
 
 import SwiftUI
@@ -30,8 +31,6 @@ struct BottomRecorderView: View {
 
             VStack(spacing: 10) {
                 HStack(spacing: 12) {
-                    Image(systemName: "mic.fill")
-                        .foregroundStyle(.red)
                     WaveformView(samples: samples)
                         .frame(height: 24)
                     Text(duration.durationString)
@@ -40,7 +39,7 @@ struct BottomRecorderView: View {
                 .font(.system(size: 15, weight: .medium))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(Color.fieldFill, in: Capsule())
+                .background(Color.limeGreen.opacity(0.1), in: Capsule())
 
                 doneButton
             }
@@ -65,10 +64,10 @@ struct BottomRecorderView: View {
             Text(AppConstants.doneTitle)
         }
         .font(.headline)
-        .foregroundStyle(Color.doneGreenText)
+        .foregroundStyle(.white)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
-        .background(Color.doneGreen, in: Capsule())
+        .background(Color.limeGreen, in: Capsule())
         #else
         Text(AppConstants.doneTitle)
             .font(.headline)

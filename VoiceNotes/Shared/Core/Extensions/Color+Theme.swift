@@ -2,7 +2,7 @@
 //  Color+Theme.swift
 //  VoiceNotes
 //
-//  Cross-platform brand colors used across iOS and macOS.
+//  Semantic colors mapped onto the brand palette (see Color+Extension).
 //
 
 import SwiftUI
@@ -17,13 +17,9 @@ extension Color {
         #endif
     }
 
-    /// Subtle fill used for search field, chips, and the recorder pill.
-    static let fieldFill = Color.gray.opacity(0.12)
+    /// Translucent gray fill for the search field, chips, and progress tracks.
+    static let fieldFill = Color.darkGrayish
 
-    /// Periwinkle blue used for the live waveform (from the mockups).
-    static let waveform = Color(red: 0.45, green: 0.55, blue: 0.85)
-
-    /// Light green "Done" pill background (iOS mockup).
-    static let doneGreen = Color(red: 0.85, green: 0.94, blue: 0.84)
-    static let doneGreenText = Color(red: 0.15, green: 0.55, blue: 0.30)
+    /// Waveform bars (Dodger Blue).
+    static let waveform = Color.dodgerBlue
 }

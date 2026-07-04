@@ -26,12 +26,11 @@ struct RecordingCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(recording.createdAt.recordingCaption)
-                .font(.caption)
+                .font(.rowCaption)
                 .foregroundStyle(.secondary)
 
             Text(recording.title)
-                .font(.headline)
-                .fontWeight(.semibold)
+                .font(.recordingTitle)
                 .fixedSize(horizontal: false, vertical: true)
                 .contentShape(Rectangle())
                 .onTapGesture(perform: onOpen)
@@ -47,7 +46,7 @@ struct RecordingCardView: View {
 
             if compact {
                 Text(recording.duration.durationString)
-                    .font(.caption)
+                    .font(.rowCaption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
                 Spacer(minLength: 12)
@@ -56,7 +55,7 @@ struct RecordingCardView: View {
                     progress: Binding(get: { progress }, set: onSeek)
                 )
                 Text(recording.duration.durationString)
-                    .font(.caption)
+                    .font(.rowCaption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
