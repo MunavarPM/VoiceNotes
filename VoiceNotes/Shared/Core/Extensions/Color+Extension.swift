@@ -36,12 +36,14 @@ extension Color {
         )
     }
 
-    // MARK: - Brand colors
+    // MARK: - Brand colors (defined in Assets.xcassets/Colors)
 
     /// #367AF6 — accent / waveform.
-    static let dodgerBlue = Color(hex: "367AF6")
+    static let dodgerBlue = Color("367AF6")
     /// #06C809 — recording / "Done" (iOS) / success.
-    static let limeGreen = Color(hex: "06C809")
-    /// #7676801F — translucent gray fill (search field, chips, tracks).
-    static let darkGrayish = Color(hex: "7676801F")
+    static let limeGreen = Color("06C809")
+    /// #767680 — solid gray (icons). Use `.opacity()` for translucent fills.
+    static let darkGrayish = Color("7676801F")
+    /// #96AAE1 — soft periwinkle for the recorder's water wave.
+    static let waterWave = Color("96AAE1")
 }

@@ -17,12 +17,10 @@ extension Color {
         #endif
     }
 
-    /// Translucent gray fill for the search field, chips, and progress tracks.
-    static let fieldFill = Color.darkGrayish
+    /// Translucent gray fill for the search field, chips, and player capsules
+    /// (the solid brand gray at ~12%, matching #7676801F).
+    static let fieldFill = Color.darkGrayish.opacity(0.12)
 
     /// Waveform bars (Dodger Blue).
     static let waveform = Color.dodgerBlue
-
-    /// Soft periwinkle for the recorder's water wave (matches the Figma).
-    static let waterWave = Color(hex: "96AAE1")
 }

@@ -166,9 +166,14 @@ struct DashboardView: View {
             } label: {
                 Image(systemName: "plus")
             }
+            .buttonStyle(ToolbarIconButtonStyle())
             .disabled(viewModel.isRecording)
+
             Button {} label: { Image(systemName: "calendar") }
+                .buttonStyle(ToolbarIconButtonStyle())
+
             Button { viewModel.showSettings = true } label: { Image(systemName: "gearshape") }
+                .buttonStyle(ToolbarIconButtonStyle())
         }
     }
 
