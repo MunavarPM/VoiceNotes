@@ -28,23 +28,6 @@ struct RecordingCardView: View {
     var onToggleStar: () -> Void = {}
     var onDelete: () -> Void = {}
 
-    @State private var showTranscript = false
-
-    private var hasTranscript: Bool {
-        recording.transcript?.isEmpty == false
-    }
-
-    /// Doc icon: transcribe if we don't have text yet, otherwise toggle
-    /// showing/hiding the existing transcript.
-    private func handleDocTap() {
-        if hasTranscript {
-            showTranscript.toggle()
-        } else {
-            showTranscript = true   // reveal it as soon as it arrives
-            onTranscribe()
-        }
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(recording.createdAt.recordingCaption)
@@ -57,7 +40,7 @@ struct RecordingCardView: View {
                 .contentShape(Rectangle())
                 .onTapGesture(perform: onOpen)
 
-            if showTranscript, let transcript = recording.transcript, !transcript.isEmpty {
+            if let transcript = recording.transcript, !transcript.isEmpty {
                 Text(transcript)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -109,18 +92,16 @@ struct RecordingCardView: View {
     private var actionIcons: some View {
         HStack(spacing: 8) {
             if showsNoteIcon {
-                Button(action: handleDocTap) {
+                Button(action: onTranscribe) {
                     Group {
                         if isTranscribing {
                             ProgressView().controlSize(.small)
                         } else {
-                            Image(systemName: "doc.text")
-                                .font(.system(size: 14))
-                                .foregroundStyle(hasTranscript ? Color.white : Color.primary)
+                            Image(systemName: "doc.text").font(.system(size: 14))
                         }
                     }
                     .frame(width: 30, height: 30)
-                    .background(hasTranscript ? Color.primary : Color.fieldFill, in: Circle())
+                    .background(Color.fieldFill, in: Circle())
                 }
                 .buttonStyle(.plain)
                 .disabled(isTranscribing)
