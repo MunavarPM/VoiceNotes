@@ -143,6 +143,7 @@ struct DashboardView: View {
                         renameText = recording.title
                     },
                     onShare: {},
+                    onToggleStar: { viewModel.toggleStar(recording) },
                     onDelete: { withAnimation { viewModel.delete(recording) } }
                 )
                 Divider()
@@ -152,17 +153,38 @@ struct DashboardView: View {
 
     private var emptyState: some View {
         VStack(spacing: 10) {
-            Image(systemName: "waveform.circle")
+            Image(systemName: viewModel.recordings.isEmpty ? "waveform.circle" : "line.3.horizontal.decrease.circle")
                 .font(.system(size: 46))
                 .foregroundStyle(Color.waveform)
-            Text("No recordings yet")
+            Text(emptyTitle)
                 .font(.headline)
-            Text("Tap ＋ to record your first voice note.")
+            Text(emptyMessage)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 80)
+    }
+
+    private var emptyTitle: String {
+        if viewModel.recordings.isEmpty { return "No recordings yet" }
+        if !viewModel.searchText.isEmpty { return "No matches" }
+        switch viewModel.filter {
+        case .all:     return "No recordings yet"
+        case .shared:  return "No shared recordings"
+        case .starred: return "No starred recordings"
+        }
+    }
+
+    private var emptyMessage: String {
+        if viewModel.recordings.isEmpty { return "Tap ＋ to record your first voice note." }
+        if !viewModel.searchText.isEmpty { return "Try a different search." }
+        switch viewModel.filter {
+        case .all:     return "Tap ＋ to record your first voice note."
+        case .shared:  return "Recordings you share will appear here."
+        case .starred: return "Star a recording from its ⋯ menu to see it here."
+        }
     }
 
     // MARK: - Toolbar

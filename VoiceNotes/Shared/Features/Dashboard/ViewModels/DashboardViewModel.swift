@@ -177,10 +177,10 @@ final class DashboardViewModel {
     // MARK: - Dictation ("Ask AI" → live speech-to-text into the search field)
 
     func toggleDictation() {
-        if isDictating {
+        if isDictating { // already listening → stop
             stopDictation()
         } else {
-            Task { await startDictation() }
+            Task { await startDictation() } // not listening → start (async) because asking persimission is asychronous.
         }
     }
 
@@ -270,6 +270,11 @@ final class DashboardViewModel {
         let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         repository?.rename(recording, to: trimmed)
+        loadRecordings()
+    }
+
+    func toggleStar(_ recording: Recording) {
+        repository?.setStarred(recording, !recording.isStarred)
         loadRecordings()
     }
 }

@@ -21,6 +21,7 @@ struct RecordingCardView: View {
     var onOpen: () -> Void = {}
     var onRename: () -> Void = {}
     var onShare: () -> Void = {}
+    var onToggleStar: () -> Void = {}
     var onDelete: () -> Void = {}
 
     var body: some View {
@@ -90,6 +91,12 @@ struct RecordingCardView: View {
                 Button("Open Player", action: onOpen)
                 Button("Rename", action: onRename)
                 Button("Share", action: onShare)
+                #if os(iOS)
+                Button(action: onToggleStar) {
+                    Label(recording.isStarred ? "Unstar" : "Star",
+                          systemImage: recording.isStarred ? "star.slash" : "star")
+                }
+                #endif
                 Button("Delete", role: .destructive, action: onDelete)
             } label: {
                 iconBadge("ellipsis")
