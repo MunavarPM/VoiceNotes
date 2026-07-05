@@ -108,6 +108,20 @@ final class DashboardViewModel {
             return
         }
 
+        // Pause/resume the live metering when the session is interrupted.
+        recorder.onInterruption = { [weak self] event in
+            guard let self else { return }
+            switch event {
+            case .began:
+                self.meterTask?.cancel()
+                self.meterTask = nil
+            case .ended(let shouldResume):
+                if shouldResume, self.isRecording {
+                    self.startMetering()
+                }
+            }
+        }
+
         let url = fileManager.newRecordingURL()
         do {
             try recorder.start(url: url)

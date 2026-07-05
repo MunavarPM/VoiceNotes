@@ -6,12 +6,23 @@
 //  live metering. Cross-platform: AVAudioSession is configured on iOS only
 //  (macOS has no audio session), and permission uses the platform API.
 //
+//  Supports background recording (see UIBackgroundModes = audio) and handles
+//  audio-session interruptions (phone calls, Siri) by pausing and resuming.
+//
 
 import Foundation
 import AVFoundation
 
+/// An audio-session interruption event (iOS).
+enum AudioInterruption {
+    case began
+    case ended(shouldResume: Bool)
+}
+
 protocol AudioRecorderService: AnyObject {
     var isRecording: Bool { get }
+    /// Called on the main queue when the audio session is interrupted/resumed.
+    var onInterruption: ((AudioInterruption) -> Void)? { get set }
     /// Requests microphone access. Returns true if granted.
     func requestPermission() async -> Bool
     /// Begins recording to `url`. Throws if the recorder can't start.
@@ -25,6 +36,9 @@ protocol AudioRecorderService: AnyObject {
 final class DefaultAudioRecorderService: AudioRecorderService {
     private var recorder: AVAudioRecorder?
     private(set) var isRecording = false
+    var onInterruption: ((AudioInterruption) -> Void)?
+
+    private var interruptionObserver: NSObjectProtocol?
 
     func requestPermission() async -> Bool {
         #if os(iOS)
@@ -43,6 +57,7 @@ final class DefaultAudioRecorderService: AudioRecorderService {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playAndRecord, mode: .default)
         try session.setActive(true)
+        observeInterruptions()
         #endif
 
         let settings: [String: Any] = [
@@ -64,6 +79,7 @@ final class DefaultAudioRecorderService: AudioRecorderService {
         recorder?.stop()
         recorder = nil
         isRecording = false
+        removeInterruptionObserver()
         #if os(iOS)
         try? AVAudioSession.sharedInstance().setActive(false)
         #endif
@@ -79,4 +95,54 @@ final class DefaultAudioRecorderService: AudioRecorderService {
         let normalized = (decibels - floorDb) / (0 - floorDb) // 0...1
         return max(0.05, min(1, normalized))
     }
+
+    // MARK: - Interruptions (iOS)
+
+    private func observeInterruptions() {
+        #if os(iOS)
+        removeInterruptionObserver()
+        interruptionObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.handleInterruption(notification)
+        }
+        #endif
+    }
+
+    private func removeInterruptionObserver() {
+        if let interruptionObserver {
+            NotificationCenter.default.removeObserver(interruptionObserver)
+            self.interruptionObserver = nil
+        }
+    }
+
+    #if os(iOS)
+    private func handleInterruption(_ notification: Notification) {
+        guard
+            let info = notification.userInfo,
+            let rawType = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+            let type = AVAudioSession.InterruptionType(rawValue: rawType)
+        else { return }
+
+        switch type {
+        case .began:
+            // The system has already paused the recorder.
+            onInterruption?(.began)
+
+        case .ended:
+            let rawOptions = info[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            let shouldResume = AVAudioSession.InterruptionOptions(rawValue: rawOptions).contains(.shouldResume)
+            if shouldResume {
+                try? AVAudioSession.sharedInstance().setActive(true)
+                recorder?.record()   // continue appending to the same file
+            }
+            onInterruption?(.ended(shouldResume: shouldResume))
+
+        @unknown default:
+            break
+        }
+    }
+    #endif
 }

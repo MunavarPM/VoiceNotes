@@ -261,6 +261,7 @@
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "VoiceNotes uses the microphone to record voice notes.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "VoiceNotes uses speech recognition to turn what you say into search text.";
+				INFOPLIST_KEY_UIBackgroundModes = audio;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -293,6 +294,7 @@
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "VoiceNotes uses the microphone to record voice notes.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "VoiceNotes uses speech recognition to turn what you say into search text.";
+				INFOPLIST_KEY_UIBackgroundModes = audio;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
