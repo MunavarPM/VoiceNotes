@@ -11,6 +11,7 @@ import SwiftUI
 
 struct PlayerView: View {
     @State private var viewModel: PlayerViewModel
+    @Environment(\.dismiss) private var dismiss
 
     init(viewModel: PlayerViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -72,6 +73,19 @@ struct PlayerView: View {
         .padding()
         .frame(minWidth: 320, minHeight: 440)
         .background(Color.appBackground)
+        .overlay(alignment: .topTrailing) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 30, height: 30)
+                    .background(Color.fieldFill, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .padding(12)
+        }
     }
 }
 
