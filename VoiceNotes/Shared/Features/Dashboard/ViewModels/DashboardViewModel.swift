@@ -31,6 +31,9 @@ final class DashboardViewModel {
     var isDictating = false
     var dictationLevel: CGFloat = 0
 
+    /// The recording currently being transcribed (for a spinner).
+    var transcribingID: Recording.ID?
+
     // Recording state
     var isRecording = false
     var recordingElapsed: TimeInterval = 0
@@ -276,5 +279,39 @@ final class DashboardViewModel {
     func toggleStar(_ recording: Recording) {
         repository?.setStarred(recording, !recording.isStarred)
         loadRecordings()
+    }
+
+    /// The on-disk file URL for a recording (used by ShareLink).
+    func fileURL(for recording: Recording) -> URL {
+        fileManager.url(forFileName: recording.filePath)
+    }
+
+    /// Flag a recording as shared (called when the user exports it).
+    func markShared(_ recording: Recording) {
+        guard !recording.isShared else { return }
+        repository?.setShared(recording, true)
+        loadRecordings()
+    }
+
+    // MARK: - Transcription (audio → text)
+
+    func isTranscribing(_ recording: Recording) -> Bool {
+        transcribingID == recording.id
+    }
+
+    func transcribe(_ recording: Recording) {
+        guard transcribingID == nil, !recording.filePath.isEmpty else { return }
+        Task {
+            transcribingID = recording.id
+            defer { transcribingID = nil }
+
+            let granted = await speech.requestPermission()
+            guard granted else { permissionDenied = true; return }
+
+            let url = fileManager.url(forFileName: recording.filePath)
+            guard let text = await speech.transcribe(url: url), !text.isEmpty else { return }
+            repository?.setTranscript(recording, text)
+            loadRecordings()
+        }
     }
 }

@@ -135,6 +135,9 @@ struct DashboardView: View {
                     compact: isCompactLayout,
                     isPlaying: viewModel.isPlaying(recording),
                     progress: viewModel.progress(for: recording),
+                    isTranscribing: viewModel.isTranscribing(recording),
+                    shareURL: viewModel.fileURL(for: recording),
+                    onTranscribe: { viewModel.transcribe(recording) },
                     onPlayPause: { viewModel.togglePlayback(for: recording) },
                     onSeek: { viewModel.seek(recording, to: $0) },
                     onOpen: { playerRecording = recording },
@@ -142,7 +145,7 @@ struct DashboardView: View {
                         renameTarget = recording
                         renameText = recording.title
                     },
-                    onShare: {},
+                    onShare: { viewModel.markShared(recording) },
                     onToggleStar: { viewModel.toggleStar(recording) },
                     onDelete: { withAnimation { viewModel.delete(recording) } }
                 )

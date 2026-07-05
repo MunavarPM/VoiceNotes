@@ -16,6 +16,8 @@ protocol RecordingRepository {
     func delete(_ recording: Recording)
     func rename(_ recording: Recording, to newTitle: String)
     func setStarred(_ recording: Recording, _ isStarred: Bool)
+    func setShared(_ recording: Recording, _ isShared: Bool)
+    func setTranscript(_ recording: Recording, _ transcript: String)
 }
 
 /// SwiftData-backed repository — real, persisted storage.
@@ -50,6 +52,16 @@ final class SwiftDataRecordingRepository: RecordingRepository {
 
     func setStarred(_ recording: Recording, _ isStarred: Bool) {
         recording.isStarred = isStarred
+        try? context.save()
+    }
+
+    func setShared(_ recording: Recording, _ isShared: Bool) {
+        recording.isShared = isShared
+        try? context.save()
+    }
+
+    func setTranscript(_ recording: Recording, _ transcript: String) {
+        recording.transcript = transcript
         try? context.save()
     }
 }

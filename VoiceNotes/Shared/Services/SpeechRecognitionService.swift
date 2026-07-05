@@ -23,6 +23,8 @@ protocol SpeechRecognitionService: AnyObject {
         onStop: @escaping () -> Void
     ) throws
     func stop()
+    /// Transcribes an existing audio file to text (nil on failure).
+    func transcribe(url: URL) async -> String?
 }
 
 enum SpeechError: Error { case unavailable }
@@ -107,6 +109,28 @@ final class DefaultSpeechRecognitionService: SpeechRecognitionService {
         #if os(iOS)
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         #endif
+    }
+
+    func transcribe(url: URL) async -> String? {
+        guard let recognizer, recognizer.isAvailable else { return nil }
+        let request = SFSpeechURLRecognitionRequest(url: url)
+        request.shouldReportPartialResults = false
+        if recognizer.supportsOnDeviceRecognition {
+            request.requiresOnDeviceRecognition = true
+        }
+        return await withCheckedContinuation { continuation in
+            var didResume = false
+            recognizer.recognitionTask(with: request) { result, error in
+                guard !didResume else { return }
+                if let result, result.isFinal {
+                    didResume = true
+                    continuation.resume(returning: result.bestTranscription.formattedString)
+                } else if error != nil {
+                    didResume = true
+                    continuation.resume(returning: nil)
+                }
+            }
+        }
     }
 
     /// Rough 0...1 loudness of a buffer for the wave.

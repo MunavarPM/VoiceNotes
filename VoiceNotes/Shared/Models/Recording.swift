@@ -23,6 +23,8 @@ final class Recording {
     var isShared: Bool
     /// Normalized 0...1 waveform bars captured while recording, for playback UI.
     var waveform: [Float]
+    /// Speech-to-text transcript (nil until the user transcribes it).
+    var transcript: String?
 
     init(
         id: UUID = UUID(),
@@ -32,7 +34,8 @@ final class Recording {
         createdAt: Date = Date(),
         isStarred: Bool = false,
         isShared: Bool = false,
-        waveform: [Float] = []
+        waveform: [Float] = [],
+        transcript: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -42,5 +45,6 @@ final class Recording {
         self.isStarred = isStarred
         self.isShared = isShared
         self.waveform = waveform
+        self.transcript = transcript
     }
 }
