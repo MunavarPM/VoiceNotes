@@ -26,7 +26,10 @@ struct DashboardView: View {
                     BottomRecorderView(
                         duration: viewModel.recordingElapsed,
                         level: viewModel.liveLevel,
-                        onDone: { withAnimation(.spring(response: 0.35)) { viewModel.stopRecording() } }
+                        onDone: {
+                            Haptics.success()
+                            withAnimation(.spring(response: 0.35)) { viewModel.stopRecording() }
+                        }
                     )
                     .padding(.horizontal, 40)
                     .padding(.bottom, 16)
@@ -145,9 +148,9 @@ struct DashboardView: View {
                         renameTarget = recording
                         renameText = recording.title
                     },
-                    onShare: { viewModel.markShared(recording) },
-                    onToggleStar: { viewModel.toggleStar(recording) },
-                    onDelete: { withAnimation { viewModel.delete(recording) } }
+                    onShare: { Haptics.tap(); viewModel.markShared(recording) },
+                    onToggleStar: { Haptics.tap(); viewModel.toggleStar(recording) },
+                    onDelete: { Haptics.warning(); withAnimation { viewModel.delete(recording) } }
                 )
                 Divider()
             }
@@ -196,6 +199,7 @@ struct DashboardView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
             Button {
+                Haptics.impact()
                 Task { await startRecordingAnimated() }
             } label: {
                 Image(systemName: "plus")

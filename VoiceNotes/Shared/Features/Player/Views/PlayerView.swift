@@ -73,6 +73,7 @@ struct PlayerView: View {
         .padding()
         .frame(minWidth: 320, minHeight: 440)
         .background(Color.appBackground)
+        #if os(macOS)
         .overlay(alignment: .topTrailing) {
             Button {
                 dismiss()
@@ -86,6 +87,7 @@ struct PlayerView: View {
             .buttonStyle(.plain)
             .padding(12)
         }
+        #endif
     }
 }
 
